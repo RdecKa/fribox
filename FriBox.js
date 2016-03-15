@@ -91,14 +91,35 @@ function naloziDatoteko(zahteva, odgovor) {
     form.on('end', function(fields, files) {
         var zacasnaPot = this.openedFiles[0].path;
         var datoteka = this.openedFiles[0].name;
-        fs.copy(zacasnaPot, dataDir + datoteka, function(napaka) {  
-            if (napaka) {
-                //Posreduj napako
-                posredujNapako404(odgovor);
+        // Preverjam, ali datoteka s takim imenom že obstaja
+        var zeObstaja = false;
+        fs.readdir(dataDir, function(napaka, datoteke) {
+            if(napaka) {
+                posredujNapako500(odgovor);
             } else {
-                posredujOsnovnoStran(odgovor);        
+                for (var i = 0; i < datoteke.length; i++) {
+                    //console.log(datoteke[i], datoteka);
+                    if (datoteke[i] == datoteka) {
+                        //posredujNapako409(odgovor);
+                        zeObstaja = true;
+                    }
+                }
+                if (zeObstaja) {
+                    posredujNapako409(odgovor);
+                } else {
+                    fs.copy(zacasnaPot, dataDir + datoteka, function(napaka) {  
+                        if (napaka) {
+                            //Posreduj napako
+                            posredujNapako404(odgovor);
+                        } else {
+                            posredujOsnovnoStran(odgovor);        
+                        }
+                    });
+                }
             }
-        });
+        })
+        console.log(zeObstaja);
+        
     });
 }
 
@@ -112,6 +133,12 @@ streznik.listen(process.env.PORT, function() {
 function posredujNapako404(odgovor) {
     odgovor.writeHead(404, {'Content-Type': 'text/plain'});
     odgovor.write("Napaka 404: Vira ni mogoče najti");
+    odgovor.end();
+}
+
+function posredujNapako409(odgovor) {
+    odgovor.writeHead(409, {'Content-Type': 'text/plain'});
+    odgovor.write("Napaka 409: Datoteka s tem imenom že obstaja.");
     odgovor.end();
 }
 
